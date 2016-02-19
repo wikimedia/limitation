@@ -1,0 +1,10 @@
+coverage
+node_modules
+npm-debug.log
+
+# WebStorm IDE files
+.idea/*
+*.iml
+
+# vim temp files
+*swp
