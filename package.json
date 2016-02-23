@@ -1,6 +1,6 @@
 {
   "name": "kad-ratelimiter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A rate limiter built on top of the kadtools kademlia DHT implementation.",
   "main": "index.js",
   "scripts": {
