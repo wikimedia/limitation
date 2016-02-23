@@ -10,8 +10,8 @@
 
 'use strict';
 
-var Promise = require('bluebird');
-var kad = Promise.promisifyAll(require('kad'));
+var P = require('bluebird');
+var kad = P.promisifyAll(require('kad'));
 var DecayingCounterStore = require('./lib/decaying_counter_store');
 
 /**
@@ -21,7 +21,8 @@ var DecayingCounterStore = require('./lib/decaying_counter_store');
  * - `listen`: {object} describing the local interface to listen on. Default:
  *   `{ address: 'localhost', port: 3050 }`. If this port is used, a random
  *   port is used instead.
- * - `seeds`: {[object]} describing seeds nodes, containing `port` and `address` string properties
+ * - `seeds`: {[object]} describing seeds nodes, containing `port` and
+ *   `address` string properties
  * - `interval`: Update interval in ms. Default: 10000ms. Longer intervals
  *   reduce load, but also increase detection latency.
  * - `minValue`: Drop global counters below this value. Default: 0.1.
@@ -78,7 +79,7 @@ RateLimiter.prototype.check = function(key, limit, increment) {
 
 /**
  * Set up / connect the RateLimiter.
- * @returns {Promise<RateLimiter>
+ * @returns {P<RateLimiter>
  */
 RateLimiter.prototype.setup = function() {
     var self = this;
@@ -119,6 +120,12 @@ RateLimiter.prototype.setup = function() {
                 storage: new DecayingCounterStore(self._options)
             });
             self._options.seeds.forEach(function(seed) {
+                if (typeof seed === 'string') {
+                    seed = {
+                        address: seed,
+                        port: 3050,
+                    };
+                }
                 if (transport._contact.port !== seed.port
                         || transport._contact.address !== seed.address) {
                     self._dht.connect(seed);
@@ -144,10 +151,10 @@ RateLimiter.prototype._getRandomizedInterval = function(multiplier) {
 RateLimiter.prototype._setupTransport = function(listen, retries) {
     var self = this;
     if (retries === 0) {
-        return Promise.reject();
+        return P.reject();
     }
 
-    return new Promise(function(resolve) {
+    return new P(function(resolve) {
         if (retries) {
             // Retry on a random port
             listen = {
@@ -183,14 +190,14 @@ RateLimiter.prototype._globalUpdates = function() {
     self._counters = {};
 
     if (!self._dht) {
-        return Promise.resolve();
+        return P.resolve();
     }
 
     // New blocks. Only update these after the full iteration.
     var newBlocks = {};
     // For each local counter, update the DHT & check for limits
     var errCount = 0;
-    return Promise.map(Object.keys(lastCounters), function(key) {
+    return P.map(Object.keys(lastCounters), function(key) {
         var counter = lastCounters[key];
         return self._dht.putAsync(key, counter.value)
         .then(function(counterVal) {
@@ -218,7 +225,7 @@ RateLimiter.prototype._globalUpdates = function() {
     .finally(function(err) {
         // Schedule the next iteration
         setTimeout(function() {
-            self._globalUpdates()
+            self._globalUpdates();
         }, self._getRandomizedInterval());
     });
 };
@@ -272,7 +279,7 @@ RateLimiter.prototype._updateBlocks = function(newBlocks) {
 
     // Async re-checks for previous blocks that didn't see any requests in the
     // last interval.
-    return Promise.map(asyncChecks, function(key) {
+    return P.map(asyncChecks, function(key) {
         var block = oldBlocks[key];
         // Only consider
         var currentLimits = Object.keys(block.limits)

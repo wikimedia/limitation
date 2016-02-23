@@ -13,7 +13,7 @@ for (var i = 0; i < numLimiters; i++) {
             port: 3050
         }],
         interval: 10000,
-    })
+    });
     limiter.setup();
     limiters.push(limiter);
 }
