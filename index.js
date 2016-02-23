@@ -33,7 +33,7 @@ function RateLimiter(options) {
         options.listen = { address: 'localhost', port: 3050 };
     }
     if (!options.listen.address) { options.listen.address = 'localhost'; }
-    if (!options.listen.port) { options.listen.address = 3050; }
+    if (!options.listen.port) { options.listen.port = 3050; }
     if (options.minValue === undefined) {
         options.minValue = 0.1;
     }
