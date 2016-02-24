@@ -5,8 +5,8 @@ An efficient rate limiter with several backends, including a Kademlia DHT.
 ## Features
 
 - Fully synchronous local limit checking for lowest latency and high
-    throughput. Using node 4.3 on a single core, a throughput of 7611508 limit
-    checks per second is typical.
+    throughput. Using node 4.3 on a single core, a throughput of about 8
+    million limit checks per second is typical.
 - Scales constant in number of requests, and linear in number of keys. Tested
     with thousands of distinct limits.
 - Backends:
