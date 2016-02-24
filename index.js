@@ -14,11 +14,11 @@ var events = require('events');
 var util = require('util');
 var P = require('bluebird');
 
-var kad = P.promisifyAll(require('kad'));
-var DecayingCounterStore = require('./lib/decaying_counter_store');
+var MemoryBackend = require('./lib/memory_backend');
+var KadBackend = require('./lib/kad_backend');
 
 /**
- * RateLimiter constructor
+ * Limitation constructor
  *
  * @param {object} options:
  * - `listen`: {object} describing the local interface to listen on. Default:
@@ -30,31 +30,26 @@ var DecayingCounterStore = require('./lib/decaying_counter_store');
  *   reduce load, but also increase detection latency.
  * - `minValue`: Drop global counters below this value. Default: 0.1.
  */
-function RateLimiter(options) {
+function Limitation(options) {
     events.EventEmitter(this);
     this._options = options || {};
-    if (!options.listen) {
-        options.listen = { address: 'localhost', port: 3050 };
-    }
-    if (!options.listen.address) { options.listen.address = 'localhost'; }
-    if (!options.listen.port) { options.listen.port = 3050; }
-    if (options.minValue === undefined) {
-        options.minValue = 0.1;
-    }
     if (options.interval === undefined) {
         options.interval = 10000;
     }
-
-    // seeds: [{ address, port }]
 
     // Local counters. Contain objects with `value` and `limits` properties.
     this._counters = {};
     this._blocks = {};
 
-    this._onMasterPort = false;
+    if (!options.seeds || !options.seeds.length) {
+        // Single-node operation
+        this._store = new MemoryBackend(options);
+    } else if (options.seeds && options.seeds.length) {
+        this._store = new KadBackend(options);
+    }
 }
 
-util.inherits(RateLimiter, events.EventEmitter);
+util.inherits(Limitation, events.EventEmitter);
 
 
 /**
@@ -66,7 +61,7 @@ util.inherits(RateLimiter, events.EventEmitter);
  * @return {boolean}: `true` if the request rate is below the limit, `false`
  * if the limit is exceeded.
  */
-RateLimiter.prototype.check = function(key, limit, increment) {
+Limitation.prototype.check = function(key, limit, increment) {
     var counter = this._counters[key];
     if (!counter) {
         counter = this._counters[key] = {
@@ -85,120 +80,41 @@ RateLimiter.prototype.check = function(key, limit, increment) {
 };
 
 /**
- * Set up / connect the RateLimiter.
- * @returns {P<RateLimiter>
+ * Set up / connect the limiter.
+ * @returns {P<Limitation>
  */
-RateLimiter.prototype.setup = function() {
+Limitation.prototype.setup = function() {
     var self = this;
-    if (!self._dht) {
+
+    return self._store.setup()
+    .then(function(store) {
+        self._store = store;
         // Start periodic global updates
         setTimeout(function() {
             return self._globalUpdates();
         }, self._getRandomizedInterval(0.5));
 
-        // Periodically update the number of contacts
-        // setInterval(function() {
-        //     self._num_contacts = self._dht._router
-        //         .getNearestContacts('', 1000, self._dht._self).length;
-        //     console.log('contacts', self._num_contacts);
-        // }, self._getRandomizedInterval(2));
-    }
-
-    if (!self._dht || !self._onMasterPort) {
-        var masterPort = self._options.listen.port;
-        return self._setupTransport(self._options.listen)
-        .then(function(transport) {
-            self._onMasterPort = transport._contact.port === masterPort;
-            // Schedule a re-connect
-            if (!self._onMasterPort) {
-                setTimeout(self.setup.bind(self), self._getRandomizedInterval(60));
-                if (self._dht) {
-                    // Already connected, but can't switch to master port. Do
-                    // not replace the current transport instance.
-                    transport.close();
-                    return;
-                }
-            }
-
-            var logger = new kad.Logger(2, 'kad-example' + Math.random());
-            self._dht = kad.Node({
-                transport: transport,
-                logger: logger,
-                storage: new DecayingCounterStore(self._options)
-            });
-            self._options.seeds.forEach(function(seed) {
-                if (typeof seed === 'string') {
-                    seed = {
-                        address: seed,
-                        port: 3050,
-                    };
-                }
-                if (transport._contact.port !== seed.port
-                        || transport._contact.address !== seed.address) {
-                    self._dht.connect(seed);
-                }
-            });
-            self._num_contacts = self._options.seeds.length;
-            return self;
-        })
-        .catch(function(err) {
-            console.log('Error during DHT setup', err);
-        });
-    }
+        return self;
+    });
 };
 
 /**
  * Randomize the configured interval slightly
  */
-RateLimiter.prototype._getRandomizedInterval = function(multiplier) {
+Limitation.prototype._getRandomizedInterval = function(multiplier) {
     var interval = this._options.interval * (multiplier || 1);
     return interval + (Math.random() - 0.5) * interval * 0.1;
-};
-
-RateLimiter.prototype._setupTransport = function(listen, retries) {
-    var self = this;
-    if (retries === 0) {
-        return P.reject();
-    }
-
-    return new P(function(resolve) {
-        if (retries) {
-            // Retry on a random port
-            listen = {
-                address: listen.address,
-                port: 1024 + Math.floor(Math.random() * 63000),
-            };
-        }
-
-        var transport = new kad.transports.UDP(
-                kad.contacts.AddressPortContact(listen));
-        transport.once('error', function() {
-            if (retries === undefined) {
-                retries = 5;
-            } else {
-                retries--;
-            }
-            resolve(self._setupTransport(listen, retries));
-        });
-        transport.once('ready', function() {
-            resolve(transport);
-        });
-    });
 };
 
 
 /**
  * Report local counts to the global DHT, and update local blocks.
  */
-RateLimiter.prototype._globalUpdates = function() {
+Limitation.prototype._globalUpdates = function() {
     var self = this;
     // Set up an empty local counter object for the next interval
     var lastCounters = self._counters;
     self._counters = {};
-
-    if (!self._dht) {
-        return P.resolve();
-    }
 
     // New blocks. Only update these after the full iteration.
     var newBlocks = {};
@@ -206,7 +122,7 @@ RateLimiter.prototype._globalUpdates = function() {
     var errCount = 0;
     return P.map(Object.keys(lastCounters), function(key) {
         var counter = lastCounters[key];
-        return self._dht.putAsync(key, counter.value)
+        return self._store.put(key, counter.value)
         .then(function(counterVal) {
             counterVal = self._normalizeCounter(counterVal);
             var minLimit = Math.min.apply(null, Object.keys(counter.limits));
@@ -238,7 +154,7 @@ RateLimiter.prototype._globalUpdates = function() {
     });
 };
 
-RateLimiter.prototype._normalizeCounter = function(val) {
+Limitation.prototype._normalizeCounter = function(val) {
     val = val || 0;
     // Compensate for exponential decay with factor 2, and scale to 1/s rates.
     // Bias against false negatives by diving by 2.2 instead of 2.0.
@@ -254,7 +170,7 @@ RateLimiter.prototype._normalizeCounter = function(val) {
  *
  * @param {object} newBlocks, new blocks based on the put response from local counters.
  */
-RateLimiter.prototype._updateBlocks = function(newBlocks) {
+Limitation.prototype._updateBlocks = function(newBlocks) {
     var self = this;
     // Stop checking for old limits if they haven't been reached in the last
     // 600 seconds.
@@ -300,7 +216,7 @@ RateLimiter.prototype._updateBlocks = function(newBlocks) {
         }
 
         // Need to get the current value
-        return self._dht.getAsync(key)
+        return self._store.get(key)
         .then(function(counterVal) {
             counterVal = self._normalizeCounter(counterVal);
             var limitObj = {};
@@ -326,4 +242,4 @@ RateLimiter.prototype._updateBlocks = function(newBlocks) {
 
 
 
-module.exports = RateLimiter;
+module.exports = Limitation;

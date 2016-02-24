@@ -1,14 +1,14 @@
 {
-  "name": "kad-ratelimiter",
-  "version": "0.1.3",
-  "description": "A rate limiter built on top of the kadtools kademlia DHT implementation.",
+  "name": "limitation",
+  "version": "0.1.4",
+  "description": "An efficient rate limiter with several backend, including a Kademlia DHT.",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gwicke/kad-ratelimiter.git"
+    "url": "https://github.com/gwicke/limitation.git"
   },
   "keywords": [
     "ratelimit",
@@ -20,7 +20,7 @@
   "author": "Gabriel Wicke <gwicke@wikimedia.org>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/gwicke/kad-ratelimiter/issues"
+    "url": "https://github.com/gwicke/limitation/issues"
   },
   "devDependencies": {
     "mocha": "^2.4.5"
