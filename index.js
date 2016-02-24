@@ -10,7 +10,10 @@
 
 'use strict';
 
+var events = require('events');
+var util = require('util');
 var P = require('bluebird');
+
 var kad = P.promisifyAll(require('kad'));
 var DecayingCounterStore = require('./lib/decaying_counter_store');
 
@@ -28,6 +31,7 @@ var DecayingCounterStore = require('./lib/decaying_counter_store');
  * - `minValue`: Drop global counters below this value. Default: 0.1.
  */
 function RateLimiter(options) {
+    events.EventEmitter(this);
     this._options = options || {};
     if (!options.listen) {
         options.listen = { address: 'localhost', port: 3050 };
@@ -49,6 +53,9 @@ function RateLimiter(options) {
 
     this._onMasterPort = false;
 }
+
+util.inherits(RateLimiter, events.EventEmitter);
+
 
 /**
  * Synchronous limit check
@@ -223,6 +230,7 @@ RateLimiter.prototype._globalUpdates = function() {
         console.log(err.stack);
     })
     .finally(function(err) {
+        self.emit('blocks', self._blocks);
         // Schedule the next iteration
         setTimeout(function() {
             self._globalUpdates();
