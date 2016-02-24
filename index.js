@@ -61,7 +61,7 @@ util.inherits(Limitation, events.EventEmitter);
  * @return {boolean}: `true` if the request rate is below the limit, `false`
  * if the limit is exceeded.
  */
-Limitation.prototype.check = function(key, limit, increment) {
+Limitation.prototype.isAboveLimit = function(key, limit, increment) {
     var counter = this._counters[key];
     if (!counter) {
         counter = this._counters[key] = {
@@ -73,9 +73,9 @@ Limitation.prototype.check = function(key, limit, increment) {
     counter.limits[limit] = counter.limits[limit] || Date.now();
 
     if (this._blocks[key]) {
-        return this._blocks[key].value < limit;
+        return this._blocks[key].value > limit;
     } else {
-        return true;
+        return false;
     }
 };
 

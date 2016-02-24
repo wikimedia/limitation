@@ -23,7 +23,7 @@ setInterval(function() {
     var iterations = 100; //Math.random() * 4;
     var rejected = 0;
     for (var i = 0; i < iterations; i++) {
-        if (!limiters[i % numLimiters].check('foo' + i % 20, 5)) {
+        if (limiters[i % numLimiters].isAboveLimit('foo' + i % 20, 5)) {
             rejected++;
         }
     }
