@@ -5,9 +5,9 @@ var RateLimiter = require('../index');
 var numLimiters = 2;
 var limiters = [];
 
+// Start a couple of DHT-backed limiters, each corresponding to one DHT node.
 for (var i = 0; i < numLimiters; i++) {
     var limiter = new RateLimiter({
-        port: 3050,
         seeds: [{
             address: 'localhost',
             port: 3050
@@ -19,6 +19,7 @@ for (var i = 0; i < numLimiters; i++) {
 }
 
 
+// Periodically exercise the rate limiters.
 setInterval(function() {
     var iterations = 100; //Math.random() * 4;
     var rejected = 0;
