@@ -33,8 +33,8 @@ var KadBackend = require('./lib/kad_backend');
 function Limitation(options) {
     events.EventEmitter(this);
     this._options = options || {};
-    if (options.interval === undefined) {
-        options.interval = 10000;
+    if (this.options.interval === undefined) {
+        this.options.interval = 10000;
     }
 
     // Local counters. Contain objects with `value` and `limits` properties.
