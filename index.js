@@ -41,7 +41,7 @@ function Limitation(options) {
     this._counters = {};
     this._blocks = {};
 
-    if (!options.seeds || !options.seeds.length) {
+    if (!this.options.seeds || !this.options.seeds.length) {
         // Single-node operation
         this._store = new MemoryBackend(options);
     } else if (options.seeds && options.seeds.length) {
