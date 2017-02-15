@@ -41,6 +41,9 @@ function Limitation(options) {
     this._counters = {};
     this._blocks = {};
 
+    this._end = false;
+    this._globalUpdatesTimeout = null;
+
     if (!options.seeds || !options.seeds.length) {
         // Single-node operation
         this._store = new MemoryBackend(options);
@@ -90,12 +93,18 @@ Limitation.prototype.setup = function() {
     .then(function(store) {
         self._store = store;
         // Start periodic global updates
-        setTimeout(function() {
+        self._globalUpdatesTimeout = setTimeout(function() {
             return self._globalUpdates();
         }, self._getRandomizedInterval(0.5));
 
         return self;
     });
+};
+
+Limitation.prototype.stop = function() {
+    this._end = true;
+    this._store.stop();
+    clearTimeout(this._globalUpdatesTimeout);
 };
 
 /**
@@ -148,7 +157,8 @@ Limitation.prototype._globalUpdates = function() {
     .finally(function(err) {
         self.emit('blocks', self._blocks);
         // Schedule the next iteration
-        setTimeout(function() {
+        if (self._end) { return; }
+        self._globalUpdatesTimeout = setTimeout(function() {
             self._globalUpdates();
         }, self._getRandomizedInterval());
     });

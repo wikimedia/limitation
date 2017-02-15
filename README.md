@@ -65,6 +65,9 @@ if (ratelimiter.isAboveLimit('some_key', 10)) {
 }
 ```
 
+// Clears any set timers so the process can exit cleanly.
+ratelimiter.stop()
+
 See also [test/index.js](test/index.js) for a runnable Kademlia example. It
 starts multiple DHT nodes, and you can start multiple copies of the script to
 play with nodes going down etc.
