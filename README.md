@@ -63,10 +63,10 @@ ratelimiter.setup();
 if (ratelimiter.isAboveLimit('some_key', 10)) {
   console.log('Limit of 10 req/s exceeded!');
 }
-```
 
 // Clears any set timers so the process can exit cleanly.
 ratelimiter.stop()
+```
 
 See also [test/index.js](test/index.js) for a runnable Kademlia example. It
 starts multiple DHT nodes, and you can start multiple copies of the script to
