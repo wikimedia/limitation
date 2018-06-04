@@ -84,8 +84,22 @@ Limitation.prototype.isAboveLimit = function(key, limit, increment) {
 };
 
 /**
+ * Checks whether we're above the limit without updating the counters.
+ * @param {string} key
+ * @param {number} limit
+ * @return {boolean}
+ */
+Limitation.prototype.checkAboveLimit = function(key, limit) {
+    if (this._blocks[key]) {
+        return this._blocks[key].value > limit;
+    } else {
+        return false;
+    }
+};
+
+/**
  * Set up / connect the limiter.
- * @returns {P<Limitation>
+ * @returns P<Limitation>
  */
 Limitation.prototype.setup = function() {
     var self = this;
