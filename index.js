@@ -29,6 +29,7 @@ var KadBackend = require('./lib/kad_backend');
  * - `interval`: Update interval in ms. Default: 10000ms. Longer intervals
  *   reduce load, but also increase detection latency.
  * - `minValue`: Drop global counters below this value. Default: 0.1.
+ * - `decayFactor`: How much to decay the counters over the interval. Default: 2^(1/3).
  */
 function Limitation(options) {
     events.EventEmitter(this);
