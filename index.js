@@ -29,6 +29,7 @@ var KadBackend = require('./lib/kad_backend');
  * - `interval`: Update interval in ms. Default: 10000ms. Longer intervals
  *   reduce load, but also increase detection latency.
  * - `minValue`: Drop global counters below this value. Default: 0.1.
+ * - `decayFactor`: How much to decay the counters over the interval. Default: 2^(1/3).
  */
 function Limitation(options) {
     events.EventEmitter(this);
@@ -83,8 +84,22 @@ Limitation.prototype.isAboveLimit = function(key, limit, increment) {
 };
 
 /**
+ * Checks whether we're above the limit without updating the counters.
+ * @param {string} key
+ * @param {number} limit
+ * @return {boolean}
+ */
+Limitation.prototype.checkAboveLimit = function(key, limit) {
+    if (this._blocks[key]) {
+        return this._blocks[key].value > limit;
+    } else {
+        return false;
+    }
+};
+
+/**
  * Set up / connect the limiter.
- * @returns {P<Limitation>
+ * @returns P<Limitation>
  */
 Limitation.prototype.setup = function() {
     var self = this;
