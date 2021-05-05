@@ -1,6 +1,6 @@
 {
   "name": "limitation",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "An efficient rate limiter with several backend, including a Kademlia DHT.",
   "main": "index.js",
   "scripts": {
@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "bluebird": "^3.3.1",
-    "kad": "git+https://github.com/wikimedia/kad.git#master",
+    "kad": "wikimedia/kad#master",
     "readable-stream": "^2.0.5"
   }
 }
